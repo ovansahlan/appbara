@@ -1,109 +1,129 @@
 "use client";
-import React, { useState } from 'react';
-
-// Data sementara (Mock) untuk tabel stok
-const mockStok = [
-  { id: 1, nama: 'Telur Ayam (kg)', jumlah: 45, status: 'Aman' },
-  { id: 2, nama: 'Beras Premium (kg)', jumlah: 12, status: 'Menipis' },
-  { id: 3, nama: 'Minyak Goreng (L)', jumlah: 30, status: 'Aman' },
-  { id: 4, nama: 'Gas Elpiji 3kg (tabung)', jumlah: 2, status: 'Kritis' },
-];
+import React, { useState, useEffect } from 'react';
 
 export default function StokPage() {
-  const [formData, setFormData] = useState({
-    jenisTransaksi: 'Masuk',
-    namaBarang: '',
-    jumlah: '',
-    keterangan: ''
-  });
+  // 1. STATE UNTUK MENAMPUNG DATA DARI BACKEND
+  const [dataStok, setDataStok] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  // State untuk form input (opsional saat ini, fokus ke GET data dulu)
+  const [formData, setFormData] = useState({ jenis: 'Masuk', nama: '', qty: '' });
+
+  // 2. FUNGSI UNTUK MENYEDOT DATA DARI API VERCEL
+  const fetchStokDariVercel = async () => {
+    setIsLoading(true);
+    setErrorMsg('');
+    try {
+      // ⚠️ GANTI URL DI BAWAH INI DENGAN URL VERCEL API ANDA ⚠️
+      // Contoh: 'https://api-appbara-anda.vercel.app/api/sheet?tab=Stok'
+      const response = await fetch('https://appbara.vercel.app/api/data'); 
+      
+      if (!response.ok) throw new Error('Gagal merespons dari server');
+      
+      const json = await response.json();
+      
+      // Asumsi backend Anda mengembalikan format: { data: [ [...], [...] ] }
+      // Kita simpan ke dalam state
+      setDataStok(json.data || []);
+      
+    } catch (err: any) {
+      console.error("Error Fetching:", err);
+      setErrorMsg(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    alert(`Simulasi: Data Stok ${formData.jenisTransaksi} berhasil disimpan!`);
-    setFormData({ ...formData, namaBarang: '', jumlah: '', keterangan: '' });
-  };
+  // 3. JALANKAN FUNGSI FETCH SECARA OTOMATIS SAAT HALAMAN DIBUKA
+  useEffect(() => {
+    fetchStokDariVercel();
+  }, []);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-10">
+    <div className="max-w-6xl mx-auto space-y-6 pb-8">
       
       {/* Header */}
-      <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-        <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">📦 Manajemen Stok</h2>
-        <p className="text-gray-500 mt-1">Pantau ketersediaan bahan baku dan catat pergerakan barang.</p>
+      <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-extrabold text-gray-800">📦 Stok & Inventori</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Pantau ketersediaan barang secara real-time dari Google Sheets.</p>
+        </div>
+        {/* Tombol Manual Refresh */}
+        <button 
+          onClick={fetchStokDariVercel}
+          className="px-4 py-2 bg-amber-50 text-amber-700 font-bold rounded-lg border border-amber-200 hover:bg-amber-100 transition"
+        >
+          {isLoading ? '⏳ Memuat...' : '🔄 Refresh Data'}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Form Input Transaksi Stok (Kiri) */}
-        <div className="lg:col-span-1 bg-white p-8 rounded-3xl shadow-xl border border-gray-100 h-fit">
-          <h3 className="text-lg font-bold text-gray-800 mb-6 border-b pb-2">Catat Mutasi Stok</h3>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-600">Jenis Transaksi</label>
-              <div className="flex gap-4">
-                <label className="flex-1 cursor-pointer">
-                  <input type="radio" name="jenisTransaksi" value="Masuk" checked={formData.jenisTransaksi === 'Masuk'} onChange={handleChange} className="peer sr-only" />
-                  <div className="text-center p-3 rounded-xl border border-gray-200 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-700 font-bold transition">⬇️ Masuk</div>
-                </label>
-                <label className="flex-1 cursor-pointer">
-                  <input type="radio" name="jenisTransaksi" value="Keluar" checked={formData.jenisTransaksi === 'Keluar'} onChange={handleChange} className="peer sr-only" />
-                  <div className="text-center p-3 rounded-xl border border-gray-200 peer-checked:bg-red-50 peer-checked:border-red-500 peer-checked:text-red-700 font-bold transition">⬆️ Keluar</div>
-                </label>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-600">Nama Barang</label>
-              <input type="text" name="namaBarang" value={formData.namaBarang} onChange={handleChange} required placeholder="Contoh: Telur Ayam" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-600">Jumlah (Qty)</label>
-              <input type="number" name="jumlah" value={formData.jumlah} onChange={handleChange} required placeholder="0" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-600">Keterangan / Supplier</label>
-              <input type="text" name="keterangan" value={formData.keterangan} onChange={handleChange} placeholder="Opsional..." className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            </div>
-
-            <button type="submit" className="w-full py-4 mt-4 bg-gray-900 text-white font-bold rounded-xl shadow-lg hover:bg-gray-800 transition-all">
-              Simpan Data Stok
-            </button>
-          </form>
+        {/* Kolom Kiri: Form (UI Statis untuk sekarang) */}
+        <div className="lg:col-span-1 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm h-fit">
+          <h3 className="text-base font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2">Catat Mutasi</h3>
+          <div className="space-y-4">
+             {/* Form fields sederhana untuk demo UI Minimalist Fun */}
+             <input type="text" placeholder="Nama Barang" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm" />
+             <input type="number" placeholder="Jumlah" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm" />
+             <button className="w-full py-3 bg-gray-900 text-white font-bold rounded-xl text-sm hover:bg-gray-800 transition">
+               Simpan Data
+             </button>
+          </div>
         </div>
 
-        {/* Tabel Stok Saat Ini (Kanan) */}
-        <div className="lg:col-span-2 bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-800 mb-6 border-b pb-2">Ketersediaan Stok (Real-time)</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+        {/* Kolom Kanan: Tabel Data Real-time */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-gray-100">
+             <h3 className="text-base font-bold text-gray-800">Ketersediaan Saat Ini</h3>
+          </div>
+          
+          <div className="overflow-x-auto p-2">
+            <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b-2 border-gray-100">
-                  <th className="p-4 text-sm font-semibold text-gray-500">Nama Barang</th>
-                  <th className="p-4 text-sm font-semibold text-gray-500">Sisa Stok</th>
-                  <th className="p-4 text-sm font-semibold text-gray-500">Status</th>
+                <tr className="border-b border-gray-100 text-gray-500">
+                  <th className="p-3 font-semibold">No</th>
+                  <th className="p-3 font-semibold">Nama Barang</th>
+                  <th className="p-3 font-semibold">Jumlah</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {mockStok.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="p-4 font-semibold text-gray-800">{item.nama}</td>
-                    <td className="p-4 text-gray-600">{item.jumlah}</td>
-                    <td className="p-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        item.status === 'Aman' ? 'bg-emerald-100 text-emerald-700' :
-                        item.status === 'Menipis' ? 'bg-amber-100 text-amber-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
-                        {item.status}
-                      </span>
+              <tbody>
+                {/* STATE 1: LOADING */}
+                {isLoading && (
+                  <tr>
+                    <td colSpan={3} className="p-8 text-center text-gray-400 font-medium animate-pulse">
+                      Menyambungkan ke Google Sheets...
                     </td>
+                  </tr>
+                )}
+
+                {/* STATE 2: ERROR */}
+                {!isLoading && errorMsg && (
+                  <tr>
+                    <td colSpan={3} className="p-8 text-center text-rose-500 font-medium">
+                      ❌ {errorMsg}
+                    </td>
+                  </tr>
+                )}
+
+                {/* STATE 3: DATA KOSONG */}
+                {!isLoading && !errorMsg && dataStok.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="p-8 text-center text-gray-400 font-medium">
+                      Belum ada data di Google Sheets.
+                    </td>
+                  </tr>
+                )}
+
+                {/* STATE 4: MENAMPILKAN DATA ASLI */}
+                {/* LOGIKA: Menyesuaikan dengan bentuk array dari Sheets (biasanya array of array) */}
+                {!isLoading && dataStok.map((baris, index) => (
+                  <tr key={index} className="hover:bg-gray-50 transition border-b border-gray-50 last:border-0">
+                    <td className="p-3 text-gray-500">{index + 1}</td>
+                    {/* Sesuaikan index array di bawah ini dengan urutan kolom di Sheet Anda */}
+                    <td className="p-3 font-semibold text-gray-800">{baris[0] || '-'}</td>
+                    <td className="p-3 text-gray-600 font-medium">{baris[1] || '0'}</td>
                   </tr>
                 ))}
               </tbody>
